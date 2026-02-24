@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSA 収益シミュレーター</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg: #0d0d0f;
+    --panel: #141418;
+    --border: #2a2a32;
+    --accent: #e8c840;
+    --accent2: #3de8a0;
+    --danger: #e84040;
+    --text: #e8e8f0;
+    --muted: #888;
+    --psa10: #f0c030;
+    --psa9: #60b0ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 10vw, 96px);
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 640px) {
+    .container { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+
+  .card.full { grid-column: 1 / -1; }
+
+  .card-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+
+  input[type="number"], input[type="range"] {
+    width: 100%;
+    background: #1c1c22;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(232,200,64,0.1);
+  }
+
+  input[type="number"]::placeholder { color: #444; }
+
+  /* Sliders */
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .slider-label span:first-child { color: var(--muted); }
+  .slider-label .val { font-size: 16px; font-weight: 700; }
+  .val.psa10 { color: var(--psa10); }
+  .val.psa9 { color: var(--psa9); }
+
+  input[type="range"] {
+    padding: 0;
+    height: 6px;
+    border-radius: 3px;
+    border: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  .range-psa10 { accent-color: var(--psa10); }
+  .range-psa9 { accent-color: var(--psa9); }
+
+  .sum-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: right;
+  }
+
+  .sum-note.warn { color: var(--danger); }
+
+  /* Results */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 640px) {
+    .results-grid { grid-template-columns: 1fr; }
+  }
+
+  .result-item {
+    background: #1c1c22;
+    border-radius: 10px;
+    padding: 18px;
+    border-left: 3px solid var(--border);
+  }
+
+  .result-item.profit { border-left-color: var(--accent2); }
+  .result-item.loss { border-left-color: var(--danger); }
+  .result-item.neutral { border-left-color: var(--accent); }
+
+  .result-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .result-value {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+  }
+
+  .result-value.positive { color: var(--accent2); }
+  .result-value.negative { color: var(--danger); }
+  .result-value.neutral { color: var(--accent); }
+
+  /* Detail table */
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .detail-table th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #1c1c22;
+  }
+
+  .detail-table tr:last-child td { border-bottom: none; }
+
+  .detail-table td:not(:first-child) { text-align: right; }
+
+  .tag-10 {
+    background: rgba(240,192,48,0.15);
+    color: var(--psa10);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .tag-9 {
+    background: rgba(96,176,255,0.15);
+    color: var(--psa9);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* Breakeven */
+  .breakeven-bar {
+    margin-top: 16px;
+    background: #1c1c22;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 8px;
+  }
+
+  .breakeven-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.4s ease;
+  }
+
+  .be-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* animate */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card { animation: fadeUp 0.4s ease both; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.1s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PSA 期待値</h1>
+  <p>グレーディング 収益シミュレーター</p>
+</div>
+
+<div class="container">
+
+  <!-- 基本コスト -->
+  <div class="card">
+    <div class="card-title">基本情報</div>
+
+    <div class="field">
+      <label>提出枚数</label>
+      <input type="number" id="qty" value="10" min="1" placeholder="10">
+    </div>
+    <div class="field">
+      <label>1枚あたりの申請コスト（円）</label>
+      <input type="number" id="costPerCard" value="3000" min="0" placeholder="3000">
+    </div>
+    <div class="field">
+      <label>カードの原価（円）</label>
+      <input type="number" id="cardCost" value="5000" min="0" placeholder="5000">
+    </div>
+  </div>
+
+  <!-- 販売金額 -->
+  <div class="card">
+    <div class="card-title">グレード別販売金額</div>
+
+    <div class="field">
+      <label>PSA10 販売金額（円）</label>
+      <input type="number" id="price10" value="30000" min="0" placeholder="30000">
+    </div>
+    <div class="field">
+      <label>PSA9以下 販売金額（円）</label>
+      <input type="number" id="price9" value="8000" min="0" placeholder="8000">
+    </div>
+  </div>
+
+  <!-- 取得率スライダー -->
+  <div class="card full">
+    <div class="card-title">PSA10 取得率設定</div>
+    <div class="slider-group">
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>PSA 10</span>
+          <span class="val psa10" id="rate10Label">30%</span>
+        </div>
+        <input type="range" id="rate10" class="range-psa10" min="0" max="100" value="30">
+      </div>
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>PSA 9以下</span>
+          <span class="val psa9" id="rate9Label">70%</span>
+        </div>
+        <input type="range" id="rate9" class="range-psa9" min="0" max="100" value="70" disabled>
+      </div>
+    </div>
+    <div class="sum-note" id="sumNote">合計: 100%</div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="card full">
+    <div class="card-title">計算結果</div>
+
+    <div class="results-grid">
+      <div class="result-item neutral">
+        <div class="result-label">総コスト</div>
+        <div class="result-value neutral" id="totalCost">¥0</div>
+      </div>
+      <div class="result-item neutral">
+        <div class="result-label">期待売上</div>
+        <div class="result-value neutral" id="totalRevenue">¥0</div>
+      </div>
+      <div class="result-item" id="profitCard">
+        <div class="result-label">期待利益</div>
+        <div class="result-value" id="totalProfit">¥0</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>グレード</th>
+          <th>期待枚数</th>
+          <th>販売単価</th>
+          <th>期待売上</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag-10">PSA 10</span></td>
+          <td id="qty10">0枚</td>
+          <td id="p10">¥0</td>
+          <td id="rev10">¥0</td>
+        </tr>
+        <tr>
+          <td><span class="tag-9">PSA 9以下</span></td>
+          <td id="qty9">0枚</td>
+          <td id="p9">¥0</td>
+          <td id="rev9">¥0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr class="divider">
+
+    <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">損益分岐点（PSA10 取得率）</div>
+    <div class="breakeven-bar">
+      <div class="breakeven-fill" id="beBar"></div>
+    </div>
+    <div class="be-label">
+      <span>現在: <span id="beCurrentRate">-</span></span>
+      <span>必要: <span id="beRequiredRate">-</span></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const ids = ['qty','costPerCard','cardCost','price10','price9','rate10'];
+  const get = id => parseFloat(document.getElementById(id).value) || 0;
+
+  document.getElementById('rate10').addEventListener('input', () => {
+    const v = parseInt(document.getElementById('rate10').value);
+    document.getElementById('rate10').value = v;
+    document.getElementById('rate9').value = 100 - v;
+    document.getElementById('rate10Label').textContent = v + '%';
+    document.getElementById('rate9Label').textContent = (100 - v) + '%';
+    calc();
+  });
+
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', calc);
+  });
+  ['price9'].forEach(id => document.getElementById(id)?.addEventListener('input', calc));
+
+  function fmt(n) {
+    return '¥' + Math.round(n).toLocaleString('ja-JP');
+  }
+
+  function calc() {
+    const qty = get('qty');
+    const costPerCard = get('costPerCard');
+    const cardCost = get('cardCost');
+    const price10 = get('price10');
+    const price9 = get('price9');
+    const rate10 = get('rate10') / 100;
+    const rate9 = 1 - rate10;
+
+    const totalCost = qty * (costPerCard + cardCost);
+    const exp10 = qty * rate10;
+    const exp9 = qty * rate9;
+    const rev10 = exp10 * price10;
+    const rev9 = exp9 * price9;
+    const totalRevenue = rev10 + rev9;
+    const profit = totalRevenue - totalCost;
+
+    document.getElementById('totalCost').textContent = fmt(totalCost);
+    document.getElementById('totalRevenue').textContent = fmt(totalRevenue);
+    document.getElementById('totalProfit').textContent = fmt(profit);
+
+    const profitCard = document.getElementById('profitCard');
+    const profitEl = document.getElementById('totalProfit');
+    profitCard.className = 'result-item ' + (profit >= 0 ? 'profit' : 'loss');
+    profitEl.className = 'result-value ' + (profit >= 0 ? 'positive' : 'negative');
+
+    document.getElementById('qty10').textContent = exp10.toFixed(1) + '枚';
+    document.getElementById('qty9').textContent = exp9.toFixed(1) + '枚';
+    document.getElementById('p10').textContent = fmt(price10);
+    document.getElementById('p9').textContent = fmt(price9);
+    document.getElementById('rev10').textContent = fmt(rev10);
+    document.getElementById('rev9').textContent = fmt(rev9);
+
+    // Breakeven PSA10 rate
+    // totalCost = qty * r * price10 + qty * (1-r) * price9
+    // r * (price10 - price9) = totalCost/qty - price9
+    // r = (totalCost/qty - price9) / (price10 - price9)
+    const beRate = (price10 !== price9)
+      ? ((totalCost / qty) - price9) / (price10 - price9)
+      : null;
+
+    const beEl = document.getElementById('beRequiredRate');
+    const beBar = document.getElementById('beBar');
+    const beCurrent = document.getElementById('beCurrentRate');
+
+    beCurrent.textContent = (rate10 * 100).toFixed(0) + '%';
+
+    if (beRate !== null && isFinite(beRate)) {
+      const pct = Math.max(0, Math.min(100, beRate * 100));
+      beEl.textContent = pct.toFixed(1) + '%';
+      const fillPct = Math.min(100, (rate10 / Math.max(beRate, 0.001)) * 100);
+      beBar.style.width = fillPct + '%';
+      beBar.style.background = rate10 >= beRate
+        ? 'linear-gradient(90deg, #3de8a0, #20c060)'
+        : 'linear-gradient(90deg, #e84040, #ff6060)';
+    } else {
+      beEl.textContent = 'N/A';
+      beBar.style.width = '0%';
+    }
+  }
+
+  calc();
+</script>
+</body>
+</html>
